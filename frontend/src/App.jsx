@@ -42,7 +42,7 @@ function App() {
   const loadInventory = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/inventory/`, {
+      const response = await fetch(`${API_URL}/v1/inventory/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -51,6 +51,9 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         setInventory(Array.isArray(data) ? data : []);
+      } else if (response.status === 401) {
+        // Token expired or invalid
+        handleLogout();
       } else {
         console.error('Error loading inventory');
       }
@@ -64,8 +67,13 @@ function App() {
   const handleLogin = async () => {
     setLoginError('');
     
+    if (!loginData.username || !loginData.password) {
+      setLoginError('Por favor ingresa usuario y contraseña');
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_URL}/users/login`, {
+      const response = await fetch(`${API_URL}/v1/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -93,26 +101,32 @@ function App() {
   };
 
   const handleAddItem = async () => {
+    if (!newItem.name.trim()) {
+      alert('El nombre del producto es requerido');
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_URL}/inventory/`, {
+      const response = await fetch(`${API_URL}/v1/inventory/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...newItem,
-          id: Date.now()
-        })
+        body: JSON.stringify(newItem)
       });
 
       if (response.ok) {
         await loadInventory();
         setShowAddModal(false);
         setNewItem({ name: '', quantity: 0, price: 0, description: '' });
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.detail || 'No se pudo agregar el producto'}`);
       }
     } catch (error) {
       console.error('Error adding item:', error);
+      alert('Error al conectar con el servidor');
     }
   };
 
@@ -120,7 +134,7 @@ function App() {
     if (!confirm('¿Estás seguro de eliminar este item?')) return;
     
     try {
-      const response = await fetch(`${API_URL}/inventory/${itemId}`, {
+      const response = await fetch(`${API_URL}/v1/inventory/${itemId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -129,9 +143,12 @@ function App() {
 
       if (response.ok) {
         await loadInventory();
+      } else {
+        alert('Error al eliminar el producto');
       }
     } catch (error) {
       console.error('Error deleting item:', error);
+      alert('Error al conectar con el servidor');
     }
   };
 
