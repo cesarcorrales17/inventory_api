@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Package, LogOut, Plus, Trash2, Search, DollarSign, Box } from 'lucide-react';
+import { Package, LogOut, Plus, Trash2, Search, DollarSign, Box, Edit, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 const API_URL = 'http://localhost:8000/api';
 
@@ -9,7 +9,9 @@ function App() {
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [notification, setNotification] = useState(null);
 
   // Login state
   const [loginData, setLoginData] = useState({ username: '', password: '' });
@@ -23,12 +25,20 @@ function App() {
     description: ''
   });
 
+  // Edit item state
+  const [editItem, setEditItem] = useState(null);
+
   useEffect(() => {
     if (token) {
       loadInventory();
       loadUserInfo();
     }
   }, [token]);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   const loadUserInfo = () => {
     try {
@@ -120,14 +130,56 @@ function App() {
         await loadInventory();
         setShowAddModal(false);
         setNewItem({ name: '', quantity: 0, price: 0, description: '' });
+        showNotification('Producto agregado exitosamente');
       } else {
         const error = await response.json();
-        alert(`Error: ${error.detail || 'No se pudo agregar el producto'}`);
+        showNotification(error.detail || 'No se pudo agregar el producto', 'error');
       }
     } catch (error) {
       console.error('Error adding item:', error);
-      alert('Error al conectar con el servidor');
+      showNotification('Error al conectar con el servidor', 'error');
     }
+  };
+
+  const handleEditItem = async () => {
+    if (!editItem.name.trim()) {
+      showNotification('El nombre del producto es requerido', 'error');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_URL}/v1/inventory/${editItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: editItem.name,
+          quantity: editItem.quantity,
+          price: editItem.price,
+          description: editItem.description
+        })
+      });
+
+      if (response.ok) {
+        await loadInventory();
+        setShowEditModal(false);
+        setEditItem(null);
+        showNotification('Producto actualizado exitosamente');
+      } else {
+        const error = await response.json();
+        showNotification(error.detail || 'No se pudo actualizar el producto', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating item:', error);
+      showNotification('Error al conectar con el servidor', 'error');
+    }
+  };
+
+  const openEditModal = (item) => {
+    setEditItem({...item});
+    setShowEditModal(true);
   };
 
   const handleDeleteItem = async (itemId) => {
@@ -143,12 +195,13 @@ function App() {
 
       if (response.ok) {
         await loadInventory();
+        showNotification('Producto eliminado exitosamente');
       } else {
-        alert('Error al eliminar el producto');
+        showNotification('Error al eliminar el producto', 'error');
       }
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('Error al conectar con el servidor');
+      showNotification('Error al conectar con el servidor', 'error');
     }
   };
 
@@ -227,6 +280,27 @@ function App() {
   // Dashboard
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Notification Toast */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-in">
+          <div className={`flex items-center space-x-3 px-6 py-4 rounded-lg shadow-lg ${
+            notification.type === 'success' 
+              ? 'bg-green-500 text-white' 
+              : 'bg-red-500 text-white'
+          }`}>
+            {notification.type === 'success' ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span className="font-medium">{notification.message}</span>
+            <button onClick={() => setNotification(null)} className="ml-2">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -371,12 +445,22 @@ function App() {
                         ${(item.price * item.quantity).toFixed(2)}
                       </td>
                       <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleDeleteItem(item.id)}
-                          className="text-red-600 hover:text-red-800 transition p-2 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="text-blue-600 hover:text-blue-800 transition p-2 hover:bg-blue-50 rounded-lg"
+                            title="Editar"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            className="text-red-600 hover:text-red-800 transition p-2 hover:bg-red-50 rounded-lg"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -459,6 +543,88 @@ function App() {
                   className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
                 >
                   Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {showEditModal && editItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Editar Producto</h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre del Producto
+                </label>
+                <input
+                  type="text"
+                  value={editItem.name}
+                  onChange={(e) => setEditItem({...editItem, name: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cantidad
+                  </label>
+                  <input
+                    type="number"
+                    value={editItem.quantity}
+                    onChange={(e) => setEditItem({...editItem, quantity: parseInt(e.target.value) || 0})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Precio
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editItem.price}
+                    onChange={(e) => setEditItem({...editItem, price: parseFloat(e.target.value) || 0})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Descripción (opcional)
+                </label>
+                <textarea
+                  value={editItem.description || ''}
+                  onChange={(e) => setEditItem({...editItem, description: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  rows="3"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditItem(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleEditItem}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                >
+                  Guardar Cambios
                 </button>
               </div>
             </div>
