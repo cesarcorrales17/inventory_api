@@ -1,13 +1,130 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Inventario</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="login-box">
+        <div class="login-header">
+            <h1>🏪 Sistema de Inventario</h1>
+            <p>Inicia sesión para continuar</p>
+        </div>
+        
+        <div id="loginError"></div>
+        
+        <div class="form-group">
+            <label>Usuario</label>
+            <input type="text" id="username" placeholder="admin" />
+        </div>
+        
+        <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="password" placeholder="••••••••" />
+        </div>
+        
+        <button class="btn btn-primary" onclick="login()">Iniciar Sesión</button>
+        
+        <div class="credentials">
+            <p><strong>Credenciales de prueba:</strong></p>
+            <p>admin / admin123</p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>📦 Gestión de Inventario</h1>
+                <p class="user-info">Bienvenido, <span id="currentUser"></span></p>
+            </div>
+            <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Productos</h3>
+                <div class="value" id="totalProducts">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Cantidad Total</h3>
+                <div class="value" id="totalQuantity">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Valor Total</h3>
+                <div class="value" id="totalValue">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="actions">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar productos..." oninput="filterProducts()" />
+            </div>
+            <button class="btn-add" onclick="openAddModal()">+ Agregar Producto</button>
+        </div>
+
+        <!-- Tabla de Inventario -->
+        <div class="inventory-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Valor Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryBody">
+                    <tr>
+                        <td colspan="5" class="loading">Cargando inventario...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Agregar/Editar -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Agregar Producto</h2>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label>Nombre del Producto *</label>
+                <input type="text" id="productName" placeholder="Ej: Laptop Dell" />
+            </div>
+            
+            <div class="form-group">
+                <label>Cantidad *</label>
+                <input type="number" id="productQuantity" placeholder="0" min="0" />
+            </div>
+            
+            <div class="form-group">
+                <label>Precio *</label>
+                <input type="number" id="productPrice" placeholder="0.00" min="0" step="0.01" />
+            </div>
+            
+            <div class="form-group">
+                <label>Descripción (opcional)</label>
+                <input type="text" id="productDescription" placeholder="Descripción del producto" />
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveProduct()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
 </html>
